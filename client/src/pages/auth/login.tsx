@@ -8,40 +8,58 @@ import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useAuth } from '../../lib/auth-context';
 import { SonaLinkLogo } from '../../components/sonalink-logo';
+import axiosClient from '../../api/axiosClient'; // Keep the import, though useAuth handles the call
+import axios from 'axios';
 
 interface LoginPageProps {
   onNavigate: (page: string) => void;
 }
 
 export function LoginPage({ onNavigate }: LoginPageProps) {
-  const { login } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false
+  });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-    if (!formData.email || !formData.password) {
-      setError('All fields are required');
-      return;
-    }
+    if (!formData.email || !formData.password) {
+      setError('All fields are required');
+      return;
+    }
 
-    try {
-      setIsLoading(true);
-      await login(formData.email, formData.password);
-      onNavigate('dashboard');
-    } catch (err) {
-      setError('Invalid email or password');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    try {
+      setIsLoading(true);
+      await login(formData.email, formData.password);
+      onNavigate('dashboard');
+    } catch (err) {
+        // --- UPDATED ERROR HANDLING LOGIC ---
+        let errorMessage = 'An unexpected error occurred during login.';
+
+        if (axios.isAxiosError(err) && err.response) {
+            // Use the specific message sent from the backend
+            const backendMessage = err.response.data.message; 
+            
+            if (backendMessage && backendMessage.includes('Account not verified')) {
+                // Specific action for unverified account
+                errorMessage = `${backendMessage} You can resend the verification email from the signup page.`;
+            } else {
+                // Use backend message for invalid credentials, etc.
+                errorMessage = backendMessage || 'Invalid email or password.';
+            }
+        }
+      setError(errorMessage);
+        // --- END UPDATED LOGIC ---
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-muted/30 via-background to-muted/30 flex items-center justify-center p-4">
